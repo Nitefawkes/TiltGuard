@@ -3,9 +3,11 @@
 import { useState, useEffect } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { CustomerInfo } from 'react-native-purchases';
 import { auth, db } from '../config/firebase';
 import { UserProfile, UserStats } from '../types';
 import { getUserProfile, getUserStats } from '../services/firebase';
+import { getCustomerInfo, hasProEntitlement } from '../services/revenuecat';
 
 /**
  * Hook to track authentication state
@@ -119,4 +121,41 @@ export function useUserStats(uid: string | null) {
   };
 
   return { stats, loading, error, refresh };
+}
+
+/**
+ * Hook to check subscription status from RevenueCat
+ * Returns Pro status and customer info
+ */
+export function useSubscription() {
+  const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
+  const [isPro, setIsPro] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadSubscriptionStatus();
+
+    // Refresh every minute to catch updates
+    const interval = setInterval(() => {
+      loadSubscriptionStatus();
+    }, 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const loadSubscriptionStatus = async () => {
+    try {
+      const info = await getCustomerInfo();
+      if (info) {
+        setCustomerInfo(info);
+        setIsPro(hasProEntitlement(info));
+      }
+    } catch (error) {
+      console.error('Error loading subscription status:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { customerInfo, isPro, loading, refresh: loadSubscriptionStatus };
 }

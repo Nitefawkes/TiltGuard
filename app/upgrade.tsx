@@ -1,6 +1,6 @@
 // Upgrade/Paywall screen - Convert Free users to Pro
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,11 +8,18 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { PurchasesPackage } from 'react-native-purchases';
 import { useAuth, useUserProfile } from '../src/hooks';
 import { Button, Card, colors } from '../src/components/UI';
-import { updateUserPlan } from '../src/services/firebase';
+import {
+  getOfferings,
+  purchasePackage,
+  restorePurchases,
+  getProductPrice,
+} from '../src/services/revenuecat';
 
 type PricingPlan = 'monthly' | 'yearly';
 
@@ -22,23 +29,69 @@ export default function UpgradeScreen() {
   const { profile } = useUserProfile(user?.uid || null);
   const [selectedPlan, setSelectedPlan] = useState<PricingPlan>('yearly');
   const [purchasing, setPurchasing] = useState(false);
+  const [restoring, setRestoring] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [packages, setPackages] = useState<{
+    monthly: PurchasesPackage | null;
+    yearly: PurchasesPackage | null;
+  }>({ monthly: null, yearly: null });
 
-  // Pricing details
-  const pricing = {
-    monthly: {
-      price: 4.99,
-      period: 'month',
-      total: '$4.99/mo',
-      savings: null,
-    },
-    yearly: {
-      price: 29.99,
-      period: 'year',
-      total: '$29.99/yr',
-      savings: 'Save 50%',
-      monthlyEquivalent: '$2.50/mo',
-    },
+  // Load offerings from RevenueCat
+  useEffect(() => {
+    loadOfferings();
+  }, []);
+
+  const loadOfferings = async () => {
+    setLoading(true);
+    try {
+      const offerings = await getOfferings();
+      if (offerings?.current) {
+        const availablePackages = offerings.current.availablePackages;
+
+        // Find packages by identifier
+        const monthly = availablePackages.find((pkg) =>
+          pkg.identifier.includes('monthly')
+        );
+        const yearly = availablePackages.find((pkg) =>
+          pkg.identifier.includes('yearly')
+        );
+
+        setPackages({
+          monthly: monthly || null,
+          yearly: yearly || null,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load offerings:', error);
+      Alert.alert(
+        'Error',
+        'Failed to load subscription options. Please check your internet connection.'
+      );
+    } finally {
+      setLoading(false);
+    }
   };
+
+  // Get pricing from RevenueCat packages or fallback to defaults
+  const getPricing = () => {
+    return {
+      monthly: {
+        price: packages.monthly ? getProductPrice(packages.monthly) : '$4.99',
+        period: 'month',
+        total: packages.monthly ? getProductPrice(packages.monthly) : '$4.99/mo',
+        savings: null,
+      },
+      yearly: {
+        price: packages.yearly ? getProductPrice(packages.yearly) : '$29.99',
+        period: 'year',
+        total: packages.yearly ? getProductPrice(packages.yearly) : '$29.99/yr',
+        savings: 'Save 50%',
+        monthlyEquivalent: packages.yearly ? '$2.50/mo' : '$2.50/mo',
+      },
+    };
+  };
+
+  const pricing = getPricing();
 
   const handlePurchase = async () => {
     if (!user?.uid) {
@@ -46,63 +99,75 @@ export default function UpgradeScreen() {
       return;
     }
 
-    // TODO: Integrate with RevenueCat for real purchases
-    // For now, we'll simulate the upgrade
-    Alert.alert(
-      'Purchase Confirmation',
-      `Upgrade to Pro ${selectedPlan === 'monthly' ? 'Monthly' : 'Yearly'} for ${
-        pricing[selectedPlan].total
-      }?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Confirm',
-          onPress: async () => {
-            setPurchasing(true);
-            try {
-              // Simulate purchase delay
-              await new Promise((resolve) => setTimeout(resolve, 1500));
+    const selectedPackage = packages[selectedPlan];
+    if (!selectedPackage) {
+      Alert.alert('Error', 'Selected plan is not available. Please try again.');
+      return;
+    }
 
-              // Update user to Pro plan
-              await updateUserPlan(user.uid, 'pro');
+    setPurchasing(true);
+    try {
+      const result = await purchasePackage(selectedPackage, user.uid);
 
-              Alert.alert(
-                'Success! 🎉',
-                'Welcome to TiltGuard Pro! You now have access to all Pro features.',
-                [
-                  {
-                    text: 'Get Started',
-                    onPress: () => router.back(),
-                  },
-                ]
-              );
-            } catch (error) {
-              console.error('Purchase error:', error);
-              Alert.alert('Error', 'Failed to complete purchase. Please try again.');
-            } finally {
-              setPurchasing(false);
-            }
-          },
-        },
-      ]
-    );
+      if (result.success) {
+        Alert.alert(
+          'Success! 🎉',
+          'Welcome to TiltGuard Pro! You now have access to all Pro features.',
+          [
+            {
+              text: 'Get Started',
+              onPress: () => router.back(),
+            },
+          ]
+        );
+      } else {
+        // Only show error if it's not a user cancellation
+        if (result.error && !result.error.includes('cancelled')) {
+          Alert.alert('Purchase Failed', result.error);
+        }
+      }
+    } catch (error: any) {
+      console.error('Purchase error:', error);
+      Alert.alert('Error', 'Failed to complete purchase. Please try again.');
+    } finally {
+      setPurchasing(false);
+    }
   };
 
-  const handleRestore = () => {
-    // TODO: Integrate with RevenueCat restore purchases
-    Alert.alert(
-      'Restore Purchases',
-      'This will restore any previous Pro subscriptions associated with your account.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Restore',
-          onPress: () => {
-            Alert.alert('Info', 'No previous purchases found.');
-          },
-        },
-      ]
-    );
+  const handleRestore = async () => {
+    if (!user?.uid) {
+      Alert.alert('Error', 'You must be logged in');
+      return;
+    }
+
+    setRestoring(true);
+    try {
+      const result = await restorePurchases(user.uid);
+
+      if (result.success) {
+        if (result.isPro) {
+          Alert.alert(
+            'Success! 🎉',
+            'Your Pro subscription has been restored!',
+            [
+              {
+                text: 'Continue',
+                onPress: () => router.back(),
+              },
+            ]
+          );
+        } else {
+          Alert.alert('No Purchases Found', result.error || 'No previous purchases found.');
+        }
+      } else {
+        Alert.alert('Error', result.error || 'Failed to restore purchases');
+      }
+    } catch (error: any) {
+      console.error('Restore error:', error);
+      Alert.alert('Error', 'Failed to restore purchases. Please try again.');
+    } finally {
+      setRestoring(false);
+    }
   };
 
   if (profile?.plan === 'pro') {
@@ -115,6 +180,18 @@ export default function UpgradeScreen() {
             You have access to all TiltGuard Pro features.
           </Text>
           <Button title="Back to Dashboard" onPress={() => router.back()} />
+        </View>
+      </View>
+    );
+  }
+
+  // Show loading state while fetching offerings
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Loading subscription options...</Text>
         </View>
       </View>
     );
@@ -256,12 +333,28 @@ export default function UpgradeScreen() {
           } - ${pricing[selectedPlan].total}`}
           onPress={handlePurchase}
           loading={purchasing}
+          disabled={purchasing || restoring}
           style={styles.purchaseButton}
         />
 
         {/* Restore Purchases */}
-        <TouchableOpacity onPress={handleRestore} style={styles.restoreButton}>
-          <Text style={styles.restoreButtonText}>Restore Purchases</Text>
+        <TouchableOpacity
+          onPress={handleRestore}
+          style={styles.restoreButton}
+          disabled={purchasing || restoring}
+        >
+          {restoring ? (
+            <ActivityIndicator size="small" color={colors.textSecondary} />
+          ) : (
+            <Text
+              style={[
+                styles.restoreButtonText,
+                (purchasing || restoring) && styles.restoreButtonTextDisabled,
+              ]}
+            >
+              Restore Purchases
+            </Text>
+          )}
         </TouchableOpacity>
 
         {/* Fine Print */}
@@ -436,6 +529,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textSecondary,
     textDecorationLine: 'underline',
+  },
+  restoreButtonTextDisabled: {
+    opacity: 0.5,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    marginTop: 16,
   },
   finePrint: {
     paddingHorizontal: 8,
