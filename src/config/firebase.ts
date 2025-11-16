@@ -27,13 +27,16 @@ if (!isConfigured) {
   );
 }
 
-// Initialize Firebase (only if not already initialized)
-const app = getApps().length === 0 && isConfigured
-  ? initializeApp(firebaseConfig)
-  : getApps()[0];
+// Initialize Firebase (only if not already initialized and configured)
+let app;
+if (isConfigured) {
+  app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+} else {
+  app = null;
+}
 
 // Initialize Firebase services (will be undefined if not configured)
-export const auth = app ? getAuth(app) : undefined as any;
-export const db = app ? getFirestore(app) : undefined as any;
+export const auth = app ? getAuth(app) : (undefined as any);
+export const db = app ? getFirestore(app) : (undefined as any);
 
 export default app;
