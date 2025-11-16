@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { useAuth } from '../src/hooks';
+import { auth } from '../src/config/firebase';
+import { FirebaseSetupScreen } from '../src/components/FirebaseSetupScreen';
 import { initializeRevenueCat, syncSubscriptionStatus } from '../src/services/revenuecat';
 
 export default function RootLayout() {
@@ -55,6 +57,11 @@ export default function RootLayout() {
     }
   }, [user, loading, segments]);
 
+  // Show setup screen if Firebase is not configured
+  if (!auth) {
+    return <FirebaseSetupScreen />;
+  }
+
   if (loading) {
     return null; // Or a loading screen
   }
@@ -63,6 +70,7 @@ export default function RootLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="auth" />
+      <Stack.Screen name="upgrade" />
     </Stack>
   );
 }

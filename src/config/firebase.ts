@@ -1,6 +1,6 @@
 // Firebase configuration and initialization
 
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
@@ -15,11 +15,25 @@ const firebaseConfig = {
   appId: "YOUR_APP_ID"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+// Check if Firebase config is set
+const isConfigured = firebaseConfig.apiKey !== "YOUR_API_KEY";
 
-// Initialize Firebase services
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+if (!isConfigured) {
+  console.error(
+    '⚠️ Firebase is not configured!\n\n' +
+    'Please update src/config/firebase.ts with your Firebase project configuration.\n' +
+    'Get it from: https://console.firebase.google.com/ -> Project Settings -> Your Apps\n\n' +
+    'See TESTING.md for detailed setup instructions.'
+  );
+}
+
+// Initialize Firebase (only if not already initialized)
+const app = getApps().length === 0 && isConfigured
+  ? initializeApp(firebaseConfig)
+  : getApps()[0];
+
+// Initialize Firebase services (will be undefined if not configured)
+export const auth = app ? getAuth(app) : undefined as any;
+export const db = app ? getFirestore(app) : undefined as any;
 
 export default app;
