@@ -17,6 +17,12 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // If auth is not configured, just set loading to false
+    if (!auth) {
+      setLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
@@ -37,7 +43,7 @@ export function useUserProfile(uid: string | null) {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    if (!uid) {
+    if (!uid || !db) {
       setProfile(null);
       setLoading(false);
       return;
@@ -79,7 +85,7 @@ export function useUserStats(uid: string | null) {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    if (!uid) {
+    if (!uid || !db) {
       setStats(null);
       setLoading(false);
       return;
@@ -110,7 +116,7 @@ export function useUserStats(uid: string | null) {
   }, [uid]);
 
   const refresh = async () => {
-    if (!uid) return;
+    if (!uid || !db) return;
     try {
       const freshStats = await getUserStats(uid);
       setStats(freshStats);
