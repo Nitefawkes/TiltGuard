@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Button, colors } from './UI';
 import { TriggerType, UserPlan, TILT_CONSTANTS } from '../types';
 import { calculateCoolOffEnd, setCoolOff } from '../services/firebase';
@@ -30,6 +31,7 @@ export function TiltModal({
   userPlan,
   userId,
 }: TiltModalProps) {
+  const router = useRouter();
   const [countdown, setCountdown] = useState(TILT_CONSTANTS.BREATHER_DURATION_SECONDS);
   const [coolOffInProgress, setCoolOffInProgress] = useState(false);
 
@@ -161,8 +163,8 @@ export function TiltModal({
               <Button
                 title="Upgrade to Pro"
                 onPress={() => {
-                  // TODO: Navigate to upgrade screen
-                  alert('Upgrade flow coming soon!');
+                  onClose();
+                  router.push('/upgrade');
                 }}
                 variant="primary"
                 style={styles.upgradeButton}

@@ -153,7 +153,7 @@ export default function SettingsScreen() {
           {profile.plan === 'free' && (
             <Button
               title="Upgrade to Pro - $4.99/mo"
-              onPress={() => alert('Upgrade flow coming soon!')}
+              onPress={() => router.push('/upgrade')}
               style={styles.upgradeButton}
             />
           )}

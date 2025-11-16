@@ -2,12 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useAuth, useUserProfile } from '../../src/hooks';
 import { Card, Button, colors } from '../../src/components/UI';
 import { getAllSettledBets } from '../../src/services/firebase';
 import { Bet, SportPattern, PatternsData } from '../../src/types';
 
 export default function PatternsScreen() {
+  const router = useRouter();
   const { user } = useAuth();
   const { profile } = useUserProfile(user?.uid || null);
   const [patterns, setPatterns] = useState<PatternsData | null>(null);
@@ -131,7 +133,7 @@ export default function PatternsScreen() {
             </View>
             <Button
               title="Upgrade to Pro - $4.99/mo"
-              onPress={() => alert('Upgrade flow coming soon!')}
+              onPress={() => router.push('/upgrade')}
               style={styles.upgradeButton}
             />
           </Card>
