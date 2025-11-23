@@ -36,7 +36,7 @@ import {
 export async function createUserProfile(
   uid: string,
   email: string,
-  settings: Omit<UserSettings, 'periodType' | 'coachTone' | 'periodStart' | 'notifications'>
+  settings: Omit<UserSettings, 'periodType' | 'coachTone' | 'periodStart' | 'notifications' | 'rss'>
 ): Promise<void> {
   const now = Date.now();
 
@@ -59,6 +59,12 @@ export async function createUserProfile(
         dailyReminder: false,
         dailyReminderTime: 20,
         pushToken: null,
+      },
+      rss: {
+        enabled: true, // RSS enabled by default (good content!)
+        enabledFeeds: ['ncpg', 'gamcare', 'bettingeducation'], // Start with responsible gambling
+        notifyOnHighPriority: true,
+        lastSync: null,
       },
     },
   };

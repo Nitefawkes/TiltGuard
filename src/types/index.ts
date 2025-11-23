@@ -25,6 +25,14 @@ export interface UserSettings {
   periodType: 'week';
   coachTone: CoachTone;
   notifications: NotificationSettings;
+  rss: RSSSettings;
+}
+
+export interface RSSSettings {
+  enabled: boolean;
+  enabledFeeds: string[]; // Array of feed IDs
+  notifyOnHighPriority: boolean;
+  lastSync: number | null; // timestamp
 }
 
 export interface NotificationSettings {

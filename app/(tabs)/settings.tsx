@@ -264,6 +264,20 @@ export default function SettingsScreen() {
           />
         </Card>
 
+        {/* RSS Feeds */}
+        <Card>
+          <Text style={styles.cardTitle}>Betting Insights</Text>
+          <Text style={styles.cardSubtitle}>
+            Curated articles on responsible gambling, betting strategies, and sports news
+          </Text>
+          <Button
+            title="📚 Browse Feeds"
+            onPress={() => router.push('/feeds')}
+            variant="outline"
+            style={styles.feedsButton}
+          />
+        </Card>
+
         {/* Data Management */}
         <Card>
           <Text style={styles.cardTitle}>Data Management</Text>
@@ -393,6 +407,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   notificationButton: {
+    marginTop: 4,
+  },
+  feedsButton: {
     marginTop: 4,
   },
   dataButton: {
