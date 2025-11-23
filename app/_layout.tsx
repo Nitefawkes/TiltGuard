@@ -104,6 +104,7 @@ export default function RootLayout() {
       <Stack.Screen name="reflection" options={{ presentation: 'modal' }} />
       <Stack.Screen name="cooloff" options={{ presentation: 'modal' }} />
       <Stack.Screen name="cooloff-complete" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="session-summary" options={{ presentation: 'modal' }} />
       <Stack.Screen name="support" />
     </Stack>
   );

@@ -35,6 +35,14 @@ import {
 } from '../../src/services/firebase';
 import { Bet, BetResult, SPORTS_OPTIONS } from '../../src/types';
 import { generateInsights, Insight } from '../../src/services/insights';
+import {
+  getActiveSession,
+  addBetToSession,
+  updateSessionOnBetSettle,
+  recordTiltWarning,
+  endSession,
+  BettingSession,
+} from '../../src/services/sessions';
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -56,14 +64,25 @@ export default function DashboardScreen() {
   const [recentBets, setRecentBets] = useState<Bet[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [insights, setInsights] = useState<Insight[]>([]);
+  const [activeSession, setActiveSession] = useState<BettingSession | null>(null);
 
-  // Load recent bets
+  // Load recent bets and active session
   useEffect(() => {
     loadRecentBets();
+    loadActiveSession();
     if (user?.uid) {
       checkAndResetPeriod(user.uid);
     }
   }, [user?.uid]);
+
+  const loadActiveSession = async () => {
+    try {
+      const session = await getActiveSession();
+      setActiveSession(session);
+    } catch (error) {
+      console.error('Error loading session:', error);
+    }
+  };
 
   // Generate insights when bets or stats change
   useEffect(() => {
@@ -102,6 +121,9 @@ export default function DashboardScreen() {
     const tiltCheck = checkTiltTriggers(stats, profile.settings);
 
     if (tiltCheck.triggered) {
+      // Record tilt warning in session
+      recordTiltWarning();
+
       // Navigate to reflection screen for user to pause and think
       router.push({
         pathname: '/reflection',
@@ -138,12 +160,18 @@ export default function DashboardScreen() {
 
     setAdding(true);
     try {
-      await addBet(user.uid, {
+      const newBet = await addBet(user.uid, {
         amount: betAmount,
         odds: betOdds,
         sport,
         notes,
       });
+
+      // Add bet to session tracking
+      if (newBet) {
+        const updatedSession = await addBetToSession(newBet);
+        setActiveSession(updatedSession);
+      }
 
       // Reset form
       setAmount('');
@@ -166,6 +194,11 @@ export default function DashboardScreen() {
 
     try {
       await settleBet(user.uid, betId, result);
+
+      // Update session with settled bet
+      const updatedSession = await updateSessionOnBetSettle(betId, result);
+      setActiveSession(updatedSession);
+
       await Promise.all([refreshStats(), loadRecentBets()]);
       Alert.alert('Success', 'Bet settled!');
 
@@ -225,6 +258,38 @@ export default function DashboardScreen() {
     }
   };
 
+  const handleEndSession = async () => {
+    if (!activeSession) return;
+
+    Alert.alert(
+      'End Session?',
+      'Review your session performance and optionally add a journal entry.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'End Session',
+          onPress: async () => {
+            try {
+              const summary = await endSession(activeSession);
+              setActiveSession(null);
+
+              // Navigate to session summary screen
+              router.push({
+                pathname: '/session-summary',
+                params: {
+                  summaryData: JSON.stringify(summary),
+                },
+              });
+            } catch (error) {
+              console.error('Error ending session:', error);
+              Alert.alert('Error', 'Failed to end session');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   if (statsLoading || !stats || !profile) {
     return (
       <View style={styles.container}>
@@ -236,6 +301,13 @@ export default function DashboardScreen() {
   const roi = stats.totalWagered > 0 ? (stats.totalPL / stats.totalWagered) * 100 : 0;
   const weeklyProgress = stats.weeklySpend / profile.settings.weeklyLossLimit;
   const isCoolOff = isCoolOffActive(stats);
+
+  // Calculate session stats
+  const sessionBets = activeSession?.bets.length || 0;
+  const sessionPL = activeSession?.totalPL || 0;
+  const sessionDuration = activeSession
+    ? Math.round((Date.now() - activeSession.startTime) / 60000)
+    : 0;
 
   return (
     <View style={styles.container}>
@@ -259,6 +331,47 @@ export default function DashboardScreen() {
             type="warning"
             style={styles.banner}
           />
+        )}
+
+        {/* Active Session Card */}
+        {activeSession && (
+          <Card style={styles.sessionCard}>
+            <View style={styles.sessionHeader}>
+              <View>
+                <Text style={styles.sessionTitle}>🎯 Active Session</Text>
+                <Text style={styles.sessionDuration}>{sessionDuration} min</Text>
+              </View>
+              <TouchableOpacity style={styles.endSessionButton} onPress={handleEndSession}>
+                <Text style={styles.endSessionText}>End Session</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.sessionStats}>
+              <View style={styles.sessionStat}>
+                <Text style={styles.sessionStatValue}>{sessionBets}</Text>
+                <Text style={styles.sessionStatLabel}>Bets</Text>
+              </View>
+              <View style={styles.sessionStat}>
+                <Text
+                  style={[
+                    styles.sessionStatValue,
+                    sessionPL > 0 && styles.sessionPLPositive,
+                    sessionPL < 0 && styles.sessionPLNegative,
+                  ]}
+                >
+                  {sessionPL >= 0 ? '+' : ''}${sessionPL.toFixed(2)}
+                </Text>
+                <Text style={styles.sessionStatLabel}>Session P/L</Text>
+              </View>
+              {activeSession.tiltWarnings > 0 && (
+                <View style={styles.sessionStat}>
+                  <Text style={[styles.sessionStatValue, styles.sessionWarning]}>
+                    {activeSession.tiltWarnings}
+                  </Text>
+                  <Text style={styles.sessionStatLabel}>Warnings</Text>
+                </View>
+              )}
+            </View>
+          </Card>
         )}
 
         {/* Stats Cards */}
@@ -614,5 +727,64 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.textSecondary,
     lineHeight: 18,
+  },
+  sessionCard: {
+    marginBottom: 8,
+  },
+  sessionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sessionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: 4,
+  },
+  sessionDuration: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  endSessionButton: {
+    backgroundColor: colors.surfaceLight,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  endSessionText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  sessionStats: {
+    flexDirection: 'row',
+    gap: 24,
+  },
+  sessionStat: {
+    alignItems: 'center',
+  },
+  sessionStatValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.textPrimary,
+    marginBottom: 4,
+  },
+  sessionPLPositive: {
+    color: colors.success,
+  },
+  sessionPLNegative: {
+    color: colors.error,
+  },
+  sessionWarning: {
+    color: colors.warning,
+  },
+  sessionStatLabel: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
   },
 });
