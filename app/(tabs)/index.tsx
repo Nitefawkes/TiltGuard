@@ -11,6 +11,7 @@ import {
   RefreshControl,
   TouchableOpacity,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useAuth, useUserProfile, useUserStats } from '../../src/hooks';
 import {
   Button,
@@ -36,6 +37,7 @@ import { Bet, BetResult, SPORTS_OPTIONS } from '../../src/types';
 import { generateInsights, Insight } from '../../src/services/insights';
 
 export default function DashboardScreen() {
+  const router = useRouter();
   const { user } = useAuth();
   const { profile } = useUserProfile(user?.uid || null);
   const { stats, loading: statsLoading, refresh: refreshStats } = useUserStats(user?.uid || null);
@@ -92,10 +94,7 @@ export default function DashboardScreen() {
 
     // Check cool-off
     if (isCoolOffActive(stats)) {
-      Alert.alert(
-        'Cool-Off Active',
-        `You're in cool-off mode for ${getCoolOffRemaining(stats)}.`
-      );
+      router.push('/cooloff');
       return;
     }
 
@@ -103,9 +102,17 @@ export default function DashboardScreen() {
     const tiltCheck = checkTiltTriggers(stats, profile.settings);
 
     if (tiltCheck.triggered) {
-      setTiltTriggerType(tiltCheck.triggerType);
-      setTiltMessage(tiltCheck.message);
-      setTiltModalVisible(true);
+      // Navigate to reflection screen for user to pause and think
+      router.push({
+        pathname: '/reflection',
+        params: {
+          triggerType: tiltCheck.triggerType,
+          message: tiltCheck.message,
+          consecutiveLosses: stats.consecutiveLosses.toString(),
+          weeklySpend: stats.weeklySpend.toString(),
+          weeklyBudget: profile.settings.weeklyBudget.toString(),
+        },
+      });
       return;
     }
 

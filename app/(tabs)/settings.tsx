@@ -292,6 +292,20 @@ export default function SettingsScreen() {
           />
         </Card>
 
+        {/* Support & Resources */}
+        <Card>
+          <Text style={styles.cardTitle}>Support & Resources</Text>
+          <Text style={styles.cardSubtitle}>
+            24/7 helplines, crisis support, and self-exclusion programs
+          </Text>
+          <Button
+            title="🆘 Get Help & Support"
+            onPress={() => router.push('/support')}
+            variant="outline"
+            style={styles.supportButton}
+          />
+        </Card>
+
         {/* Sign Out */}
         <Button title="Sign Out" onPress={handleSignOut} variant="danger" />
       </ScrollView>
@@ -413,6 +427,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   dataButton: {
+    marginTop: 4,
+  },
+  supportButton: {
     marginTop: 4,
   },
 });
