@@ -292,6 +292,20 @@ export default function SettingsScreen() {
           />
         </Card>
 
+        {/* Achievements & Streaks */}
+        <Card>
+          <Text style={styles.cardTitle}>Achievements & Streaks</Text>
+          <Text style={styles.cardSubtitle}>
+            Track your progress, maintain responsible betting streaks, and unlock achievements
+          </Text>
+          <Button
+            title="🏆 View Achievements"
+            onPress={() => router.push('/achievements')}
+            variant="outline"
+            style={styles.achievementsButton}
+          />
+        </Card>
+
         {/* Support & Resources */}
         <Card>
           <Text style={styles.cardTitle}>Support & Resources</Text>
@@ -427,6 +441,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   dataButton: {
+    marginTop: 4,
+  },
+  achievementsButton: {
     marginTop: 4,
   },
   supportButton: {

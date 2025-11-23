@@ -43,6 +43,7 @@ import {
   endSession,
   BettingSession,
 } from '../../src/services/sessions';
+import { getStreaks, Streaks } from '../../src/services/streaks';
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -65,11 +66,13 @@ export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [insights, setInsights] = useState<Insight[]>([]);
   const [activeSession, setActiveSession] = useState<BettingSession | null>(null);
+  const [streaks, setStreaks] = useState<Streaks | null>(null);
 
-  // Load recent bets and active session
+  // Load recent bets, active session, and streaks
   useEffect(() => {
     loadRecentBets();
     loadActiveSession();
+    loadStreaks();
     if (user?.uid) {
       checkAndResetPeriod(user.uid);
     }
@@ -81,6 +84,15 @@ export default function DashboardScreen() {
       setActiveSession(session);
     } catch (error) {
       console.error('Error loading session:', error);
+    }
+  };
+
+  const loadStreaks = async () => {
+    try {
+      const streaksData = await getStreaks();
+      setStreaks(streaksData);
+    } catch (error) {
+      console.error('Error loading streaks:', error);
     }
   };
 
@@ -104,7 +116,7 @@ export default function DashboardScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([refreshStats(), loadRecentBets()]);
+    await Promise.all([refreshStats(), loadRecentBets(), loadStreaks()]);
     setRefreshing(false);
   };
 
@@ -372,6 +384,26 @@ export default function DashboardScreen() {
               )}
             </View>
           </Card>
+        )}
+
+        {/* Streaks Widget */}
+        {streaks && streaks.responsibleBetting.current > 0 && (
+          <TouchableOpacity
+            style={styles.streaksWidget}
+            onPress={() => router.push('/achievements')}
+          >
+            <View style={styles.streaksHeader}>
+              <Text style={styles.streaksIcon}>🔥</Text>
+              <View style={styles.streaksContent}>
+                <Text style={styles.streaksValue}>{streaks.responsibleBetting.current}</Text>
+                <Text style={styles.streaksLabel}>Day Responsible Streak</Text>
+              </View>
+              <Text style={styles.streaksArrow}>→</Text>
+            </View>
+            {streaks.responsibleBetting.current >= streaks.responsibleBetting.best && streaks.responsibleBetting.best > 0 && (
+              <Text style={styles.streaksPersonalBest}>🏆 Personal Best!</Text>
+            )}
+          </TouchableOpacity>
         )}
 
         {/* Stats Cards */}
@@ -786,5 +818,44 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.textSecondary,
     textTransform: 'uppercase',
+  },
+  streaksWidget: {
+    backgroundColor: colors.surfaceDark,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: '#FF9800',
+  },
+  streaksHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  streaksIcon: {
+    fontSize: 32,
+    marginRight: 12,
+  },
+  streaksContent: {
+    flex: 1,
+  },
+  streaksValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FF9800',
+  },
+  streaksLabel: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  streaksArrow: {
+    fontSize: 20,
+    color: colors.textMuted,
+  },
+  streaksPersonalBest: {
+    fontSize: 12,
+    color: '#FFD700',
+    marginTop: 8,
+    textAlign: 'center',
+    fontWeight: '600',
   },
 });
