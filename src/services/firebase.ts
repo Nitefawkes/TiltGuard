@@ -13,6 +13,8 @@ import {
   addDoc,
   serverTimestamp,
   Timestamp,
+  QueryDocumentSnapshot,
+  DocumentData,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import {
@@ -192,7 +194,7 @@ export async function getRecentBets(uid: string, limitCount = 20): Promise<Bet[]
   );
 
   const snapshot = await getDocs(betsQuery);
-  return snapshot.docs.map((doc) => ({
+  return snapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => ({
     id: doc.id,
     ...doc.data(),
   })) as Bet[];
@@ -209,11 +211,11 @@ export async function getAllSettledBets(uid: string): Promise<Bet[]> {
 
   const snapshot = await getDocs(betsQuery);
   return snapshot.docs
-    .map((doc) => ({
+    .map((doc: QueryDocumentSnapshot<DocumentData>) => ({
       id: doc.id,
       ...doc.data(),
     }))
-    .filter((bet) => bet.status === 'settled') as Bet[];
+    .filter((bet: any) => bet.status === 'settled') as Bet[];
 }
 
 // ==================== STATS OPERATIONS ====================

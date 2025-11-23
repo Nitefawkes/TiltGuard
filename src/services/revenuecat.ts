@@ -66,7 +66,7 @@ export async function getPackage(
     // Find the package by identifier
     const packageId = REVENUECAT_CONFIG.products[type];
     const package_ = offerings.current.availablePackages.find(
-      (pkg) => pkg.identifier === packageId
+      (pkg: PurchasesPackage) => pkg.identifier === packageId
     );
 
     if (!package_) {

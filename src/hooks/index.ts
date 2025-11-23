@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, DocumentSnapshot } from 'firebase/firestore';
 import { CustomerInfo } from 'react-native-purchases';
 import { auth, db } from '../config/firebase';
 import { UserProfile, UserStats } from '../types';
@@ -23,7 +23,7 @@ export function useAuth() {
       return;
     }
 
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, (user: User | null) => {
       setUser(user);
       setLoading(false);
     });
@@ -55,7 +55,7 @@ export function useUserProfile(uid: string | null) {
     // Set up real-time listener for user profile
     const unsubscribe = onSnapshot(
       doc(db, 'users', uid),
-      (doc) => {
+      (doc: DocumentSnapshot) => {
         if (doc.exists()) {
           setProfile({ uid, ...doc.data() } as UserProfile);
         } else {
@@ -63,9 +63,9 @@ export function useUserProfile(uid: string | null) {
         }
         setLoading(false);
       },
-      (err) => {
+      (err: Error) => {
         console.error('Error fetching user profile:', err);
-        setError(err as Error);
+        setError(err);
         setLoading(false);
       }
     );
@@ -97,7 +97,7 @@ export function useUserStats(uid: string | null) {
     // Set up real-time listener for stats
     const unsubscribe = onSnapshot(
       doc(db, 'users', uid, 'stats', 'main'),
-      (doc) => {
+      (doc: DocumentSnapshot) => {
         if (doc.exists()) {
           setStats(doc.data() as UserStats);
         } else {
@@ -105,9 +105,9 @@ export function useUserStats(uid: string | null) {
         }
         setLoading(false);
       },
-      (err) => {
+      (err: Error) => {
         console.error('Error fetching user stats:', err);
-        setError(err as Error);
+        setError(err);
         setLoading(false);
       }
     );

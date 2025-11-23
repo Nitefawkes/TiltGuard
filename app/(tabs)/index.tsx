@@ -292,7 +292,7 @@ export default function DashboardScreen() {
           {recentBets.length === 0 ? (
             <Text style={styles.emptyText}>No bets yet. Add your first bet!</Text>
           ) : (
-            recentBets.map((bet) => (
+            recentBets.map((bet: Bet) => (
               <View key={bet.id} style={styles.betItem}>
                 <View style={styles.betInfo}>
                   <Text style={styles.betSport}>{bet.sport}</Text>

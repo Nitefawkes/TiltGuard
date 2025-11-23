@@ -12,7 +12,8 @@ import {
 import { useRouter } from 'expo-router';
 import { Button, colors } from './UI';
 import { TriggerType, UserPlan, TILT_CONSTANTS } from '../types';
-import { calculateCoolOffEnd, setCoolOff } from '../services/firebase';
+import { setCoolOff } from '../services/firebase';
+import { calculateCoolOffEnd } from '../services/tiltDetection';
 
 interface TiltModalProps {
   visible: boolean;
@@ -47,7 +48,7 @@ export function TiltModal({
     if (!visible || userPlan !== 'pro' || countdown === 0) return;
 
     const timer = setInterval(() => {
-      setCountdown((prev) => Math.max(0, prev - 1));
+      setCountdown((prev: number) => Math.max(0, prev - 1));
     }, 1000);
 
     return () => clearInterval(timer);

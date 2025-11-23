@@ -103,7 +103,7 @@ export function Button({
 // ==================== CARD COMPONENT ====================
 
 interface CardProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   style?: ViewStyle;
 }
 

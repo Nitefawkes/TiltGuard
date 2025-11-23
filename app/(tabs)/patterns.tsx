@@ -223,7 +223,7 @@ export default function PatternsScreen() {
         {/* Full Breakdown */}
         <Card>
           <Text style={styles.cardTitle}>Sport Breakdown</Text>
-          {patterns.sportBreakdown.map((sport) => (
+          {patterns.sportBreakdown.map((sport: SportPattern) => (
             <View key={sport.sport} style={styles.sportRow}>
               <Text style={styles.sportRowName}>{sport.sport}</Text>
               <Text

@@ -49,10 +49,10 @@ export default function UpgradeScreen() {
         const availablePackages = offerings.current.availablePackages;
 
         // Find packages by identifier
-        const monthly = availablePackages.find((pkg) =>
+        const monthly = availablePackages.find((pkg: PurchasesPackage) =>
           pkg.identifier.includes('monthly')
         );
-        const yearly = availablePackages.find((pkg) =>
+        const yearly = availablePackages.find((pkg: PurchasesPackage) =>
           pkg.identifier.includes('yearly')
         );
 
@@ -330,7 +330,7 @@ export default function UpgradeScreen() {
         <Button
           title={`Start Pro ${
             selectedPlan === 'yearly' ? 'Yearly' : 'Monthly'
-          } - ${pricing[selectedPlan].total}`}
+          } - ${pricing[selectedPlan as 'monthly' | 'yearly'].total}`}
           onPress={handlePurchase}
           loading={purchasing}
           disabled={purchasing || restoring}
