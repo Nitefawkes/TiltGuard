@@ -19,6 +19,7 @@ import {
   calculateSportDistribution,
   calculateDayOfWeekPatterns,
 } from '../../src/services/analytics';
+import { unlockAchievement } from '../../src/services/streaks';
 
 export default function PatternsScreen() {
   const router = useRouter();
@@ -30,6 +31,8 @@ export default function PatternsScreen() {
 
   useEffect(() => {
     loadPatterns();
+    // Unlock analytics achievement when user visits patterns
+    unlockAchievement('explored_analytics');
   }, [user?.uid]);
 
   const loadPatterns = async () => {

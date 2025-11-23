@@ -12,6 +12,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useAuth } from '../src/hooks';
 import { updateUserStats } from '../src/services/firebase';
+import { unlockAchievement } from '../src/services/streaks';
 
 export default function SupportScreen() {
   const router = useRouter();
@@ -59,9 +60,12 @@ export default function SupportScreen() {
         coolOffUntil: lockUntil,
       });
 
+      // Unlock voluntary break achievement
+      await unlockAchievement('took_voluntary_break');
+
       Alert.alert(
         'Self-Exclusion Activated',
-        'Your account is now locked for 72 hours. Use this time to rest and seek support if needed.',
+        'Your account is now locked for 72 hours. Use this time to rest and seek support if needed.\n\n🏆 Achievement Unlocked: Self-Aware!',
         [
           {
             text: 'OK',

@@ -44,6 +44,11 @@ import {
   BettingSession,
 } from '../../src/services/sessions';
 import { getStreaks, Streaks } from '../../src/services/streaks';
+import {
+  updateDailyStreaks,
+  checkAchievements,
+  unlockAchievement,
+} from '../../src/services/streaks';
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -67,6 +72,7 @@ export default function DashboardScreen() {
   const [insights, setInsights] = useState<Insight[]>([]);
   const [activeSession, setActiveSession] = useState<BettingSession | null>(null);
   const [streaks, setStreaks] = useState<Streaks | null>(null);
+  const [hadTiltWarningToday, setHadTiltWarningToday] = useState(false);
 
   // Load recent bets, active session, and streaks
   useEffect(() => {
@@ -136,6 +142,9 @@ export default function DashboardScreen() {
       // Record tilt warning in session
       recordTiltWarning();
 
+      // Mark that tilt warning occurred today
+      setHadTiltWarningToday(true);
+
       // Navigate to reflection screen for user to pause and think
       router.push({
         pathname: '/reflection',
@@ -185,6 +194,17 @@ export default function DashboardScreen() {
         setActiveSession(updatedSession);
       }
 
+      // Check if this is first bet (unlock achievement)
+      if (stats && stats.totalWagered === 0) {
+        const firstBetAchievement = await unlockAchievement('first_bet');
+        if (firstBetAchievement) {
+          Alert.alert(
+            '🎯 Achievement Unlocked!',
+            `${firstBetAchievement.title}\n${firstBetAchievement.description}`
+          );
+        }
+      }
+
       // Reset form
       setAmount('');
       setOdds('');
@@ -192,7 +212,7 @@ export default function DashboardScreen() {
       setShowBetForm(false);
 
       // Reload data
-      await Promise.all([refreshStats(), loadRecentBets()]);
+      await Promise.all([refreshStats(), loadRecentBets(), loadStreaks()]);
     } catch (error) {
       console.error('Error adding bet:', error);
       Alert.alert('Error', 'Failed to add bet');
@@ -212,6 +232,49 @@ export default function DashboardScreen() {
       setActiveSession(updatedSession);
 
       await Promise.all([refreshStats(), loadRecentBets()]);
+
+      // Get updated stats for streak/achievement checking
+      const { getUserStats } = await import('../../src/services/firebase');
+      const updatedStats = await getUserStats(user.uid);
+      if (!updatedStats) {
+        Alert.alert('Success', 'Bet settled!');
+        return;
+      }
+
+      // Update daily streaks
+      const updatedStreaks = await updateDailyStreaks(
+        updatedStats,
+        profile.settings,
+        hadTiltWarningToday
+      );
+      setStreaks(updatedStreaks);
+
+      // Check for achievement unlocks
+      const achievementResults = await checkAchievements({
+        totalBets: recentBets.length + 1, // Include just settled bet
+        streaks: updatedStreaks,
+        totalPL: updatedStats.totalPL,
+        weeklyPL: updatedStats.totalPL, // Simplified for now
+        hasSetLimits: profile.settings.weeklyBudget > 0,
+      });
+
+      // Show notification for newly unlocked achievements
+      const newAchievements = achievementResults.filter((a) => a.isNew);
+      if (newAchievements.length > 0) {
+        const first = newAchievements[0];
+        Alert.alert(
+          '🏆 Achievement Unlocked!',
+          `${first.achievement.title}\n${first.achievement.description}`,
+          [
+            {
+              text: 'View All',
+              onPress: () => router.push('/achievements'),
+            },
+            { text: 'OK', style: 'cancel' },
+          ]
+        );
+      }
+
       Alert.alert('Success', 'Bet settled!');
 
       // Send notifications if enabled

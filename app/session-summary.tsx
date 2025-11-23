@@ -13,6 +13,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SessionSummary, endSessionWithJournal, getSessionHistory } from '../src/services/sessions';
 import { useAuth } from '../src/hooks';
 import { updateUserStats } from '../src/services/firebase';
+import { unlockAchievement } from '../src/services/streaks';
 
 export default function SessionSummaryScreen() {
   const router = useRouter();
@@ -82,9 +83,12 @@ export default function SessionSummaryScreen() {
       const coolOffUntil = Date.now() + hours * 60 * 60 * 1000;
       await updateUserStats(user.uid, { coolOffUntil });
 
+      // Unlock voluntary break achievement
+      const achievement = await unlockAchievement('took_voluntary_break');
+
       Alert.alert(
         'Break Set',
-        `You've set a ${hours}-hour break. Use this time to rest and reflect.`,
+        `You've set a ${hours}-hour break. Use this time to rest and reflect.${achievement ? '\n\n🏆 Achievement Unlocked: Self-Aware!' : ''}`,
         [
           {
             text: 'OK',

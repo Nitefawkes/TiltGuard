@@ -25,6 +25,7 @@ import {
   getHighPriorityItems,
 } from '../src/services/rss';
 import { updateUserSettings } from '../src/services/firebase';
+import { unlockAchievement } from '../src/services/streaks';
 
 const FEED_CACHE_KEY = '@tiltguard_rss_cache';
 
@@ -44,6 +45,8 @@ export default function FeedsScreen() {
     if (profile?.settings.rss?.enabled) {
       refreshFeeds();
     }
+    // Unlock feeds achievement when user visits feeds
+    unlockAchievement('explored_feeds');
   }, [profile]);
 
   const loadCachedFeeds = async () => {
