@@ -250,6 +250,20 @@ export default function SettingsScreen() {
           </Card>
         )}
 
+        {/* Data Management */}
+        <Card>
+          <Text style={styles.cardTitle}>Data Management</Text>
+          <Text style={styles.cardSubtitle}>
+            Export your data, download templates, and manage your betting history
+          </Text>
+          <Button
+            title="📥 Manage Data & Exports"
+            onPress={() => router.push('/data')}
+            variant="outline"
+            style={styles.dataButton}
+          />
+        </Card>
+
         {/* Sign Out */}
         <Button title="Sign Out" onPress={handleSignOut} variant="danger" />
       </ScrollView>
@@ -363,5 +377,8 @@ const styles = StyleSheet.create({
   },
   coolOffBanner: {
     marginBottom: 12,
+  },
+  dataButton: {
+    marginTop: 4,
   },
 });

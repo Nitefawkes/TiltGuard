@@ -7,6 +7,18 @@ import { useAuth, useUserProfile } from '../../src/hooks';
 import { Card, Button, colors } from '../../src/components/UI';
 import { getAllSettledBets } from '../../src/services/firebase';
 import { Bet, SportPattern, PatternsData } from '../../src/types';
+import {
+  ProfitLossChart,
+  SportPieChart,
+  DayOfWeekChart,
+  WinRateChart,
+} from '../../src/components/Charts';
+import {
+  calculateDailyTimeSeries,
+  prepareTimeSeriesChart,
+  calculateSportDistribution,
+  calculateDayOfWeekPatterns,
+} from '../../src/services/analytics';
 
 export default function PatternsScreen() {
   const router = useRouter();
@@ -14,6 +26,7 @@ export default function PatternsScreen() {
   const { profile } = useUserProfile(user?.uid || null);
   const [patterns, setPatterns] = useState<PatternsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [betsData, setBetsData] = useState<Bet[]>([]);
 
   useEffect(() => {
     loadPatterns();
@@ -25,6 +38,7 @@ export default function PatternsScreen() {
     setLoading(true);
     try {
       const bets = await getAllSettledBets(user.uid);
+      setBetsData(bets);
       const computed = computePatterns(bets);
       setPatterns(computed);
     } catch (error) {
@@ -160,6 +174,12 @@ export default function PatternsScreen() {
     );
   }
 
+  // Calculate analytics data
+  const dailyData = calculateDailyTimeSeries(betsData, 30);
+  const timeSeriesData = prepareTimeSeriesChart(dailyData);
+  const sportDistribution = calculateSportDistribution(betsData);
+  const dayOfWeekData = calculateDayOfWeekPatterns(betsData);
+
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
@@ -167,6 +187,36 @@ export default function PatternsScreen() {
           <Text style={styles.headerTitle}>Patterns 📊</Text>
           <Text style={styles.headerSubtitle}>Insights from your betting history</Text>
         </View>
+
+        {/* Data Export Button */}
+        <Button
+          title="📥 Export Data"
+          onPress={() => router.push('/data')}
+          variant="outline"
+          style={styles.exportButton}
+        />
+
+        {/* Profit/Loss Chart */}
+        <Card>
+          <ProfitLossChart data={timeSeriesData} title="30-Day P/L Trend" />
+        </Card>
+
+        {/* Sport Distribution */}
+        <Card>
+          <SportPieChart data={sportDistribution} />
+        </Card>
+
+        {/* Day of Week Patterns */}
+        <Card>
+          <DayOfWeekChart data={dayOfWeekData} />
+        </Card>
+
+        {/* Win Rate by Day */}
+        {dayOfWeekData.length > 0 && (
+          <Card>
+            <WinRateChart data={dayOfWeekData} />
+          </Card>
+        )}
 
         {/* Best Sport */}
         {patterns.bestSport && (
@@ -301,6 +351,9 @@ const styles = StyleSheet.create({
   },
   upgradeButton: {
     width: '100%',
+  },
+  exportButton: {
+    marginBottom: 8,
   },
   emptyText: {
     fontSize: 14,

@@ -33,6 +33,7 @@ import {
   checkAndResetPeriod,
 } from '../../src/services/firebase';
 import { Bet, BetResult, SPORTS_OPTIONS } from '../../src/types';
+import { generateInsights, Insight } from '../../src/services/insights';
 
 export default function DashboardScreen() {
   const { user } = useAuth();
@@ -52,6 +53,7 @@ export default function DashboardScreen() {
 
   const [recentBets, setRecentBets] = useState<Bet[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [insights, setInsights] = useState<Insight[]>([]);
 
   // Load recent bets
   useEffect(() => {
@@ -61,10 +63,18 @@ export default function DashboardScreen() {
     }
   }, [user?.uid]);
 
+  // Generate insights when bets or stats change
+  useEffect(() => {
+    if (stats && recentBets.length > 0) {
+      const generated = generateInsights(recentBets, stats);
+      setInsights(generated);
+    }
+  }, [recentBets, stats]);
+
   const loadRecentBets = async () => {
     if (!user?.uid) return;
     try {
-      const bets = await getRecentBets(user.uid, 10);
+      const bets = await getRecentBets(user.uid, 100); // Get more for insights
       setRecentBets(bets);
     } catch (error) {
       console.error('Error loading bets:', error);
@@ -223,6 +233,34 @@ export default function DashboardScreen() {
             style={styles.progressBar}
           />
         </Card>
+
+        {/* Smart Insights */}
+        {insights.length > 0 && (
+          <Card style={styles.insightsCard}>
+            <Text style={styles.cardTitle}>💡 Smart Insights</Text>
+            {insights.slice(0, 3).map((insight) => (
+              <View key={insight.id} style={styles.insightItem}>
+                <View
+                  style={[
+                    styles.insightIndicator,
+                    {
+                      backgroundColor:
+                        insight.type === 'positive' || insight.type === 'achievement'
+                          ? colors.success
+                          : insight.type === 'warning'
+                          ? colors.warning
+                          : colors.info,
+                    },
+                  ]}
+                />
+                <View style={styles.insightContent}>
+                  <Text style={styles.insightTitle}>{insight.title}</Text>
+                  <Text style={styles.insightMessage}>{insight.message}</Text>
+                </View>
+              </View>
+            ))}
+          </Card>
+        )}
 
         {/* Add New Bet */}
         {!showBetForm && (
@@ -490,5 +528,33 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     marginTop: 40,
+  },
+  insightsCard: {
+    marginTop: 8,
+  },
+  insightItem: {
+    flexDirection: 'row',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  insightIndicator: {
+    width: 4,
+    borderRadius: 2,
+    marginRight: 12,
+  },
+  insightContent: {
+    flex: 1,
+  },
+  insightTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: 4,
+  },
+  insightMessage: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    lineHeight: 18,
   },
 });
