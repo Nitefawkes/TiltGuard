@@ -165,3 +165,73 @@ export function useSubscription() {
 
   return { customerInfo, isPro, loading, refresh: loadSubscriptionStatus };
 }
+
+/**
+ * Hook to manage push notifications
+ */
+export function useNotifications(userId: string | null) {
+  const [isRegistered, setIsRegistered] = useState(false);
+  const [permission, setPermission] = useState<'granted' | 'denied' | 'undetermined'>('undetermined');
+
+  useEffect(() => {
+    if (!userId) return;
+
+    // Check notification permissions on mount
+    checkPermissions();
+  }, [userId]);
+
+  const checkPermissions = async () => {
+    const { areNotificationsEnabled } = await import('../services/notifications');
+    const enabled = await areNotificationsEnabled();
+    setPermission(enabled ? 'granted' : 'denied');
+  };
+
+  const requestPermissions = async (): Promise<boolean> => {
+    const { requestNotificationPermissions, registerForPushNotificationsAsync } = await import('../services/notifications');
+    const { updateNotificationSettings } = await import('../services/firebase');
+
+    const granted = await requestNotificationPermissions();
+    setPermission(granted ? 'granted' : 'denied');
+
+    if (granted && userId) {
+      // Register for push notifications and get token
+      const token = await registerForPushNotificationsAsync();
+
+      if (token) {
+        // Save token to user profile
+        await updateNotificationSettings(userId, {
+          enabled: true,
+          pushToken: token,
+        });
+        setIsRegistered(true);
+      }
+    }
+
+    return granted;
+  };
+
+  const disableNotifications = async () => {
+    if (!userId) return;
+
+    const { updateNotificationSettings } = await import('../services/firebase');
+    const { cancelAllNotifications } = await import('../services/notifications');
+
+    // Cancel all scheduled notifications
+    await cancelAllNotifications();
+
+    // Update settings
+    await updateNotificationSettings(userId, {
+      enabled: false,
+    });
+
+    setIsRegistered(false);
+  };
+
+  return {
+    isRegistered,
+    permission,
+    requestPermissions,
+    disableNotifications,
+    checkPermissions,
+  };
+}

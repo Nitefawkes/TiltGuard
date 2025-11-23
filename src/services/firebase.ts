@@ -36,7 +36,7 @@ import {
 export async function createUserProfile(
   uid: string,
   email: string,
-  settings: Omit<UserSettings, 'periodType' | 'coachTone' | 'periodStart'>
+  settings: Omit<UserSettings, 'periodType' | 'coachTone' | 'periodStart' | 'notifications'>
 ): Promise<void> {
   const now = Date.now();
 
@@ -49,6 +49,17 @@ export async function createUserProfile(
       periodStart: now,
       periodType: 'week',
       coachTone: 'calm',
+      notifications: {
+        enabled: false,
+        tiltWarnings: true,
+        coolOffReminders: true,
+        budgetAlerts: true,
+        weeklySummary: true,
+        milestones: true,
+        dailyReminder: false,
+        dailyReminderTime: 20,
+        pushToken: null,
+      },
     },
   };
 
@@ -124,6 +135,31 @@ export async function updateUserPlan(
   plan: 'free' | 'pro'
 ): Promise<void> {
   await updateDoc(doc(db, 'users', uid), { plan });
+}
+
+/**
+ * Update notification settings
+ */
+export async function updateNotificationSettings(
+  uid: string,
+  notificationUpdates: Partial<import('../types').NotificationSettings>
+): Promise<void> {
+  const userRef = doc(db, 'users', uid);
+  const userDoc = await getDoc(userRef);
+
+  if (!userDoc.exists()) {
+    throw new Error('User not found');
+  }
+
+  const currentSettings = userDoc.data().settings as UserSettings;
+  const updatedNotifications = {
+    ...currentSettings.notifications,
+    ...notificationUpdates,
+  };
+
+  await updateDoc(userRef, {
+    'settings.notifications': updatedNotifications,
+  });
 }
 
 // ==================== BET OPERATIONS ====================

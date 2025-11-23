@@ -349,15 +349,18 @@ eas submit --platform all
 - [x] Dashboard + bet tracking
 - [x] 3 tilt triggers
 
-### Phase 2: Guardrails + Paywall (Weeks 5-8) ⏳
+### Phase 2: Guardrails + Paywall (Weeks 5-8) ✅
 - [x] TiltModal + breather
 - [x] Cool-off system
 - [x] Settings + Patterns screens
-- [ ] RevenueCat integration
-- [ ] Upgrade/paywall screen
+- [x] RevenueCat integration
+- [x] Upgrade/paywall screen
+- [x] CSV Export/Import (Tier 1)
+- [x] Advanced Analytics & Charts (Tier 2)
+- [x] Smart Insights Engine (Tier 2)
 
-### Phase 3: Launch (Weeks 9-12) 📅
-- [ ] Push notifications
+### Phase 3: Launch (Weeks 9-12) ⏳
+- [x] Push notifications
 - [ ] App Store assets
 - [ ] Landing page
 - [ ] TestFlight beta

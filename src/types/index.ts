@@ -24,6 +24,19 @@ export interface UserSettings {
   periodStart: number; // timestamp
   periodType: 'week';
   coachTone: CoachTone;
+  notifications: NotificationSettings;
+}
+
+export interface NotificationSettings {
+  enabled: boolean;
+  tiltWarnings: boolean;
+  coolOffReminders: boolean;
+  budgetAlerts: boolean;
+  weeklySummary: boolean;
+  milestones: boolean;
+  dailyReminder: boolean;
+  dailyReminderTime: number; // Hour of day (0-23)
+  pushToken: string | null;
 }
 
 // ==================== STATS TYPES ====================

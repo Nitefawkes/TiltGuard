@@ -155,12 +155,63 @@ export default function DashboardScreen() {
   };
 
   const handleSettleBet = async (betId: string, result: BetResult) => {
-    if (!user?.uid) return;
+    if (!user?.uid || !profile) return;
 
     try {
       await settleBet(user.uid, betId, result);
       await Promise.all([refreshStats(), loadRecentBets()]);
       Alert.alert('Success', 'Bet settled!');
+
+      // Send notifications if enabled
+      if (profile.settings.notifications?.enabled) {
+        const {
+          scheduleTiltWarningNotification,
+          scheduleBudgetWarningNotification,
+          scheduleMilestoneNotification,
+          checkMilestones,
+        } = await import('../../src/services/notifications');
+        const { getUserStats } = await import('../../src/services/firebase');
+
+        // Get updated stats
+        const updatedStats = await getUserStats(user.uid);
+        if (!updatedStats) return;
+
+        // Check for tilt triggers
+        if (profile.settings.notifications.tiltWarnings) {
+          const tiltCheck = checkTiltTriggers(updatedStats, profile.settings);
+          if (tiltCheck.triggered) {
+            await scheduleTiltWarningNotification(
+              tiltCheck.triggerType!,
+              tiltCheck.message
+            );
+          }
+        }
+
+        // Check for budget warnings
+        if (profile.settings.notifications.budgetAlerts) {
+          const budgetPercent =
+            (updatedStats.weeklySpend / profile.settings.weeklyLossLimit) *
+            100;
+          if (budgetPercent >= 80 && budgetPercent < 100) {
+            await scheduleBudgetWarningNotification(
+              budgetPercent,
+              updatedStats.weeklySpend,
+              profile.settings.weeklyLossLimit
+            );
+          }
+        }
+
+        // Check for milestones
+        if (profile.settings.notifications.milestones) {
+          const milestone = checkMilestones(updatedStats);
+          if (milestone) {
+            await scheduleMilestoneNotification(
+              milestone.milestone,
+              milestone.description
+            );
+          }
+        }
+      }
     } catch (error) {
       console.error('Error settling bet:', error);
       Alert.alert('Error', 'Failed to settle bet');

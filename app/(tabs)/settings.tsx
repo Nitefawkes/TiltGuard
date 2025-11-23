@@ -250,6 +250,20 @@ export default function SettingsScreen() {
           </Card>
         )}
 
+        {/* Notifications */}
+        <Card>
+          <Text style={styles.cardTitle}>Notifications</Text>
+          <Text style={styles.cardSubtitle}>
+            Manage push notifications and alerts
+          </Text>
+          <Button
+            title="🔔 Notification Settings"
+            onPress={() => router.push('/notifications')}
+            variant="outline"
+            style={styles.notificationButton}
+          />
+        </Card>
+
         {/* Data Management */}
         <Card>
           <Text style={styles.cardTitle}>Data Management</Text>
@@ -377,6 +391,9 @@ const styles = StyleSheet.create({
   },
   coolOffBanner: {
     marginBottom: 12,
+  },
+  notificationButton: {
+    marginTop: 4,
   },
   dataButton: {
     marginTop: 4,
